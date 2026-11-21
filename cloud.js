@@ -24,5 +24,6 @@ export const cloud={
  async saveDay(day,payload){return this.api('day_progress?on_conflict=user_id,day',{method:'POST',body:{user_id:this.session.user.id,day,payload},prefer:'resolution=merge-duplicates,return=representation'});},
  async createTeam(){return this.rpc('create_team',{});},
  async joinTeam(code){return this.rpc('join_team',{invite:code.trim().toUpperCase()})},
- async getTeam(){let mine=await this.getMyProfile();if(!mine?.team_id)return null;let users=await this.api(`profiles?select=id,display_name,team_id&team_id=eq.${encodeURIComponent(mine.team_id)}`);let teams=await this.api(`teams?select=id,invite_code&id=eq.${encodeURIComponent(mine.team_id)}`);return {members:users||[],team:teams?.[0]||null};},
+ async setStudyDay(day){return this.rpc('set_study_day',{selected_day:day})},
+ async getTeam(){let mine=await this.getMyProfile();if(!mine?.team_id)return null;let users=await this.api(`profiles?select=id,display_name,team_id&team_id=eq.${encodeURIComponent(mine.team_id)}`);let teams=await this.api(`teams?select=id,invite_code,study_day&id=eq.${encodeURIComponent(mine.team_id)}`);return {members:users||[],team:teams?.[0]||null};},
 };

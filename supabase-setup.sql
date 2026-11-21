@@ -5,6 +5,7 @@ create table if not exists public.teams (
   id uuid primary key default gen_random_uuid(),
   invite_code text unique not null check (char_length(invite_code) between 8 and 24),
   owner_id uuid not null references auth.users(id) on delete cascade,
+  study_day integer not null default 1 check (study_day between 1 and 120),
   created_at timestamptz not null default now()
 );
 create table if not exists public.profiles (
@@ -20,7 +21,7 @@ create table if not exists public.day_progress (
   updated_at timestamptz not null default now(),
   primary key (user_id,day)
 );
--- Additional per-user milestone records for shared project scores and video completion.
+-- Additional per-user milestone records for shared project and video completion.
 -- Partner can read these records, but only their owner can edit them.
 create table if not exists public.learner_meta (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -145,7 +146,7 @@ create policy progress_delete on public.day_progress for delete to authenticated
 
 -- Important: do not grant INSERT/UPDATE/DELETE on peers' data or publicly open these tables.
 
--- V2 Competition: allow team peers to view achievements but never modify them.
+-- V2 shared learning: teammates can read each other's progress but never modify it.
 create policy meta_select on public.learner_meta for select to authenticated
   using (public.can_view_profile(user_id));
 create policy meta_insert on public.learner_meta for insert to authenticated
@@ -154,3 +155,21 @@ create policy meta_update on public.learner_meta for update to authenticated
   using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 create policy meta_delete on public.learner_meta for delete to authenticated
   using (user_id = (select auth.uid()));
+
+-- Shared lesson selector. Any joined team member may choose the common study day.
+-- Neither member may write to the other member's individual progress.
+create or replace function public.set_study_day(selected_day integer)
+returns integer language plpgsql security definer set search_path = '' as $$
+declare team_uuid uuid;
+begin
+  if (select auth.uid()) is null then raise exception 'Authentication required'; end if;
+  if selected_day is null or selected_day < 1 or selected_day > 120 then raise exception 'Study day must be 1–120'; end if;
+  select team_id into team_uuid from public.profiles where id=(select auth.uid());
+  if team_uuid is null then raise exception 'Join a study pair first'; end if;
+  update public.teams set study_day=selected_day where id=team_uuid;
+  if not found then raise exception 'Study pair no longer exists'; end if;
+  return selected_day;
+end;
+$$;
+revoke all on function public.set_study_day(integer) from public, anon;
+grant execute on function public.set_study_day(integer) to authenticated;
