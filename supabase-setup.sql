@@ -20,6 +20,15 @@ create table if not exists public.day_progress (
   updated_at timestamptz not null default now(),
   primary key (user_id,day)
 );
+-- Additional per-user milestone records for shared project scores and video completion.
+-- Partner can read these records, but only their owner can edit them.
+create table if not exists public.learner_meta (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  projects jsonb not null default '{}'::jsonb,
+  video_status jsonb not null default '{}'::jsonb,
+  active_day integer not null default 1 check (active_day between 1 and 120),
+  updated_at timestamptz not null default now()
+);
 create index if not exists ix_profiles_team on public.profiles(team_id);
 create index if not exists ix_day_progress_owner on public.day_progress(user_id);
 
@@ -99,14 +108,30 @@ grant execute on function public.create_team() to authenticated;
 
 -- Give authenticated clients only the table privileges required by this app.
 -- RLS policies below restrict these privileges further to the account/duo.
-revoke all on public.teams, public.profiles, public.day_progress from anon;
+revoke all on public.teams, public.profiles, public.day_progress, public.learner_meta from anon;
 grant select on public.teams to authenticated;
 grant select,insert,update on public.profiles to authenticated;
 grant select,insert,update,delete on public.day_progress to authenticated;
+grant select,insert,update,delete on public.learner_meta to authenticated;
 
 alter table public.teams enable row level security;
 alter table public.profiles enable row level security;
 alter table public.day_progress enable row level security;
+alter table public.learner_meta enable row level security;
+
+drop policy if exists teams_select on public.teams;
+drop policy if exists teams_insert on public.teams;
+drop policy if exists profiles_select on public.profiles;
+drop policy if exists profiles_insert on public.profiles;
+drop policy if exists profiles_update on public.profiles;
+drop policy if exists progress_select on public.day_progress;
+drop policy if exists progress_insert on public.day_progress;
+drop policy if exists progress_update on public.day_progress;
+drop policy if exists progress_delete on public.day_progress;
+drop policy if exists meta_select on public.learner_meta;
+drop policy if exists meta_insert on public.learner_meta;
+drop policy if exists meta_update on public.learner_meta;
+drop policy if exists meta_delete on public.learner_meta;
 
 create policy teams_select on public.teams for select to authenticated using(public.can_view_team(id) or owner_id=(select auth.uid()));
 create policy teams_insert on public.teams for insert to authenticated with check(owner_id=(select auth.uid()));
@@ -119,3 +144,13 @@ create policy progress_update on public.day_progress for update to authenticated
 create policy progress_delete on public.day_progress for delete to authenticated using(user_id=(select auth.uid()));
 
 -- Important: do not grant INSERT/UPDATE/DELETE on peers' data or publicly open these tables.
+
+-- V2 Competition: allow team peers to view achievements but never modify them.
+create policy meta_select on public.learner_meta for select to authenticated
+  using (public.can_view_profile(user_id));
+create policy meta_insert on public.learner_meta for insert to authenticated
+  with check (user_id = (select auth.uid()));
+create policy meta_update on public.learner_meta for update to authenticated
+  using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+create policy meta_delete on public.learner_meta for delete to authenticated
+  using (user_id = (select auth.uid()));

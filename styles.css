@@ -3,3 +3,42 @@
 @media(max-width:1100px){.app-shell{grid-template-columns:205px 1fr}.main{padding:0 20px 26px}.sidebar{padding:15px 9px}.grid.four{grid-template-columns:repeat(2,1fr)}.hero-art{font-size:50px}}
 @media(max-width:850px){.app-shell{display:block}.sidebar{display:none}.mobile-top{display:flex;background:#101a29;padding:13px 17px;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}.mobile-top .brand{padding:0;font-size:17px}.main{padding:0 15px 90px}.topbar{min-height:68px;margin-bottom:20px}.mobile-nav{position:fixed;bottom:0;left:0;right:0;z-index:60;background:#0d1927f5;border-top:1px solid #314459;display:flex;justify-content:space-around;padding:7px 4px max(8px,env(safe-area-inset-bottom));backdrop-filter:blur(12px)}.mobile-nav a{display:grid;gap:3px;text-align:center;font-size:10px;color:#9db0c3;padding:6px 7px;min-width:50px}.mobile-nav a.active{color:#76e4b3}.mobile-nav b{font-size:18px}.split{grid-template-columns:1fr}.grid.three{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:560px){.hero{padding:22px}.hero-art{display:none}.grid.two,.grid.three,.grid.four,.form-grid{grid-template-columns:1fr}.panel{padding:17px}.topbar .profile-select{max-width:135px}.page-heading{align-items:flex-start}.timeline-row{grid-template-columns:66px 1fr 55px;font-size:11px}.block-top{flex-wrap:wrap}.day-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.day-card{min-height:146px;padding:12px}.btn{padding:10px 12px}}
+
+/* V2 competition dashboard — unmistakable individual and comparative progress. */
+.progress-track{height:13px;background:#293b52;border:1px solid #37536a;box-shadow:inset 0 1px 2px #050d1680;margin:10px 0}
+.progress-fill{min-height:100%;box-shadow:0 0 10px #2fcd9570}
+.progress-fill.alt{box-shadow:0 0 10px #7799fb70}
+.duo-alert{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px}
+.duo-alert a{font-weight:800;color:#9affd1;text-decoration:underline;text-underline-offset:3px}
+.competition-banner{background:radial-gradient(circle at 80% -30%,#395a5350,transparent 55%),linear-gradient(125deg,#142336,#101a28);border-color:#315665}
+.competition-top{display:flex;justify-content:space-between;align-items:center;gap:13px;flex-wrap:wrap;margin:12px 0 17px}
+.score-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+.score-card{padding:18px;border:1px solid #336b56;border-radius:14px;background:linear-gradient(120deg,#15372f,#122a2b)}
+.score-card.alt{border-color:#415c91;background:linear-gradient(120deg,#202c50,#172b42)}
+.score-number{font-family:'Space Grotesk',system-ui,sans-serif;color:#9bf7c5;font-size:clamp(32px,5vw,48px);line-height:1.25;font-weight:800;margin:9px 0}
+.score-card.alt .score-number{color:#adc6ff}
+.score-number span{font-size:15px;color:var(--muted);font-weight:600}
+.activity-list{margin-top:15px;display:grid;gap:3px}
+.activity-line{border-top:1px solid #2b3a4c;display:flex;align-items:flex-start;gap:12px;padding:12px 0}
+.activity-dot{display:grid;place-items:center;border-radius:50%;font-size:12px;min-width:28px;height:28px;background:#1a433a;color:#99ffcd;font-weight:800}
+.activity-line .tiny{margin-top:4px;line-height:1.4}
+.compact-select{max-width:330px;min-width:200px}
+.compare-card{background:#132a29;border:1px solid #305f57;border-radius:13px;padding:17px}
+.compare-card.blue{background:#18243a;border-color:#435a83}
+.compare-card h3{margin-bottom:13px}
+.compare-task{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #2e4550;font-size:13px}
+.check-green{color:#9af8c4;font-weight:800}.check-dim{color:#8093a5}
+.duo-table-wrap{width:100%;overflow:auto;margin-top:16px;border:1px solid #283d50;border-radius:12px;max-height:500px}
+.duo-table{width:100%;border-collapse:collapse;text-align:left;font-size:13px;min-width:470px}
+.duo-table th{position:sticky;top:0;background:#1a2a3e;color:#b3d5ed;font-size:12px;z-index:1}
+.duo-table td,.duo-table th{padding:12px 14px;border-bottom:1px solid #28394d}
+.duo-table th:not(:first-child),.duo-table td:not(:first-child){text-align:center}
+.duo-table tbody tr:hover{background:#1a2e3a}
+.day-jump{border:0;background:transparent;color:#b5e8d7;font-weight:650;text-align:left;padding:1px;cursor:pointer}
+.day-jump:hover{text-decoration:underline}
+.completion-tag{background:#263449;color:#aab7c8;display:inline-block;padding:5px 8px;border-radius:8px;white-space:nowrap;font-size:11px}
+.completion-tag.partial{background:#31402e;color:#d4df9d}
+.completion-tag.complete{background:#1c503c;color:#a0ffc5}
+.completion-tag.blue.complete{background:#283e66;color:#c1d3ff}
+.name-chip{background:#14273a;color:#d3f6e6;border:1px solid #344c5e;padding:12px;border-radius:9px;font-weight:800}
+@media(max-width:600px){.score-grid{gap:8px}.score-card{padding:12px}.score-number{font-size:30px}.competition-top .pill{line-height:1.4}.compact-select{max-width:100%}.duo-card{padding:15px}}

@@ -1,71 +1,59 @@
-# V2 — 120-Day Software Engineering Academy
+# V2 — Praveen vs Sanchita | Two-Person Competition Edition
 
-A **working, static, frontend-only** software engineering study dashboard designed for **two learners**, six focused hours each day, 120 daily lessons, projects, videos, timers and separate progress bars. Upload the site to GitHub Pages, Vercel or any static host.
+**Important:** This is a real static website, with separate local progress for **Praveen** and **Sanchita**, and an optional **Supabase-powered, cross-device shared competition**. GitHub Pages and Vercel host the frontend. Neither host alone can sync progress between two devices.
 
-For visitors upgrading an existing installation on the same site origin, V2 reads legacy local progress and cloud settings when newer V2 data does not exist. Export a backup before changing domains.
+## First: replace the old version
 
-## What works out of the box
+1. Back up existing progress on your old V2 site (Settings → Export) before replacing files.
+2. Extract the updated V2 ZIP and upload the **files inside the `V2` folder** directly to the **root** of your existing GitHub repo `V2`. Select overwrite/commit changes for files with the same name. Keep the same repository URL so previous browser progress can be detected from `localStorage`.
+3. In GitHub Settings → Pages, select **Deploy from a branch → main → / (root)**. Open `https://YOUR_USERNAME.github.io/V2/` and perform a hard refresh (`Ctrl+Shift+R`) if you still see the older dashboard.
+4. Open the new **🏆 Praveen vs Sanchita** page. The bars now track *every completed study block* (720 total), so the number advances after the first checkbox. Separate, larger bars also show completed days (0–120). The competition has points, progress by day, 6 individual checkboxes for each day, recent lessons, quiz completion and project scoreboard.
+5. **Local mode** works without further setup but is limited to a **single browser**. To make Praveen and Sanchita see each other's real achievements on different devices, follow the next section.
 
-- 120 curated learning days across Java, DSA, Spring Boot, SQL, security, React, TypeScript, DevOps, cloud, AI and interviews.
-- Every lesson contains six distinct study blocks totaling exactly **360 active minutes**.
-- Two independent **local** learner profiles, each with separate checklists, timers, notes, quiz answers, project tracking, YouTube watch status and progress graphs.
-- Embedded YouTube course players with direct YouTube fallback links.
-- Daily progress bars, 120-day progress bars, elapsed study time, study streaks and phase summaries.
-- Per-block focus timers. Timers **pause when you hide or close the tab**, so unattended time is not counted. The already-recorded time is stored and is available to resume when you return.
-- **Persistent browser storage** (localStorage), backup export and import. Switching tabs, reloading, or closing/reopening a normal browser retains progress, unless browsing data is cleared or browser policies prevent storage.
-- Working daily multiple-choice quizzes, editable learning journal, independent assignments and project milestone checkboxes.
-- No npm install, build process, hosting account credentials or backend required to use the **local two-profile mode**.
+## Required to share progress between two devices
 
-> The included website is written in **vanilla JavaScript ES modules, CSS and HTML** to keep deployment genuinely zero-build. The optional master prompt separately specifies React/TypeScript if you prefer regenerating that architecture.
+**You need one Supabase project** (a cloud database), two distinct accounts, and one shared invitation code. You do NOT need to deploy a custom backend or buy a server.
 
-## Quick deployment — GitHub Pages
+1. One of you creates a new project at https://supabase.com/dashboard. Open **SQL Editor** and run the full file **`supabase-setup.sql`**. If you already ran the older V2 SQL in the same project, run **`supabase-upgrade.sql`** instead; it adds project and video metadata used by the leaderboard. New users do not need to run both scripts.
+2. In Supabase → **Authentication → Providers**, ensure Email authentication is enabled. Keep email confirmation enabled and each person verifies their own email.
+3. In **Project Settings → API Keys** or **Connect**, copy the project's `https://...supabase.co` URL and its **publishable key** (a public `sb_publishable_...` key). **Never use a secret or service-role key**, and never upload any passwords to GitHub.
+4. Recommended: in the downloaded `cloud-config.js`, fill in the `CLOUD_URL` and `CLOUD_PUBLISHABLE_KEY` variables with those *public* values, then commit that file to your GitHub repository. This shares the same project configuration with both devices. Alternatively each learner can enter the URL and publishable key separately under V2 → **Settings**, then click Save cloud configuration.
+5. **Praveen's device:** Open the hosted V2 website → Settings → "Who is using this device?" → **Praveen**. Create a cloud account with Praveen's own email/password; verify the email and then sign in. Click **Create study duo** and copy the invitation code.
+6. **Sanchita's device:** Open the *same* hosted website → Settings → select **Sanchita**. Create a **different** cloud account using her own email/password, verify, and sign in. Enter the invitation code and click **Join duo**. Each person may click **Save my selected name** after login to confirm their displayed identity.
+7. Open **🏆 Praveen vs Sanchita**. Each person's **own** account can edit their own lesson checks, projects, quiz scores, video statuses and timers. Their partner can view progress and milestones but cannot modify the other's record. RLS enforces this in Supabase.
+8. Mark a block completed on Praveen's screen, then check Sanchita's competition page. Updates are saved to the database on change (short debounce) and **refreshed automatically about every 15 seconds** while the competition page is visible. You can click **↻ Sync teammate** for an immediate refresh. Reliable syncing requires internet access and valid Supabase settings.
+9. Close and reopen the page on either device: local progress is cached in that browser and restored from the matching cloud account after login. The focus timer remains **paused**; it does not accumulate unattended study hours while the tab is closed.
 
-1. Create a GitHub repository named, for example, `v2`.
-2. Upload **index.html, styles.css, app.js, course.js, cloud.js, favicon.svg** and other included project files to the repository root (not the parent `v2` folder).
-3. Open your repository **Settings → Pages**.
-4. Under **Build and deployment**, choose **Deploy from a branch** and branch **main**, folder **/(root)**. Save.
-5. Open `https://YOUR_USERNAME.github.io/v2/` after GitHub Pages has published the site.
-6. Share the link with your friend.
+### Troubleshooting
 
-Because routing uses hash URLs (`#/dashboard`, `#/day/12`), no server-side rewrite configuration is needed. This site is truly static and requires **no GitHub Action build workflow**.
+- **Two names but no shared progress:** You are still in browser-only local mode; sign in to cloud on both devices and join the same duo. Local data from one device is not automatically copied to another.
+- **Cloud error `relation learner_meta does not exist`:** Run `supabase-upgrade.sql` in your previously configured Supabase project.
+- **Progress bar appears at 0%:** Check at least one of the six blocks on any Day page. The blocks progress bar should then show `0.1%` (1/720); the *completed days* bar will remain at 0 until all six blocks of one day are checked.
+- **Partner still says Waiting for your friend:** The second learner has not joined the invitation code, or the team link failed. Both must be logged in to their separate accounts in the **same** Supabase project.
+- **Wrong name after logging in:** Select the correct name in Settings and click **Save my selected name**.
+- **Already deployed before:** Use the same site URL if you want browser-local progress to stay accessible. Always export a backup before switching domains.
+- **Could not save to cloud / stale leaderboard:** Check connection, valid sign-in, SQL setup, and click Sync teammate. Offline edits remain in browser until reconnected, but cross-device conflict merging is best-effort, not guaranteed.
+- **GitHub Pages shows source or 404:** `index.html` must be at the root, and Pages must use `main` / `(root)`.
 
-## Deploy to Vercel
+### Competition scoring
 
-1. Import your GitHub repository in Vercel.
-2. Select **Framework Preset: Other**, **Build Command: None**, **Output Directory: `.`**, and root directory `.`.
-3. Deploy. Hash routing works without special rewrites.
+- Completed study block: **10 points**.
+- Finished day (all six checked): **20 bonus points**.
+- Correct daily quiz: **5 points**.
+- Completed project: **25 points**.
+- Study time is shown separately; idle minutes do not earn points. These self-reported points are for motivation, not a verified measure of skill.
 
-## Two-person progress: important difference
+### Privacy / security
 
-**Same browser / device:** Select `You` or `Friend` using the dropdown at the top. Each profile has its own completely independent saved progress and both appear on the Duo dashboard.
+- Each learner must have their own credentials; never share passwords.
+- Supabase RLS restricts progress and project data to the account owner and connected partner, and only the owner can write.
+- As currently implemented, the connected partner can read the full day-progress records, which include personal study notes. Do not write secrets or sensitive personal information in V2 notes.
+- Use only the Supabase public/publishable key in `cloud-config.js`. Public configuration is not an authentication secret.
+- Export backup JSON periodically. Account sign-ins and schema have **not been verified against a live Supabase project** in this environment; test with two real accounts after setup.
 
-**Separate devices, without cloud sync:** Each device stores its own progress. Learners can each continue when they close their tab, but **will not automatically see the other's progress**. This is a limitation of local browser storage, not a bug.
+---
 
-**Separate devices, with live cloud progress:** Connect a Supabase project as described below. Each person needs a distinct verified email/password cloud account. One creates a study duo and shares the invitation code. The other joins. Progress and leaderboards then sync through the hosted database. The browser frontend remains static; Supabase is an optional external data service. This requires a Supabase account and an internet connection. Its free tier may be subject to usage quotas and future changes.
-
-## Optional cloud sync setup (two devices)
-
-1. Create a Supabase project: https://supabase.com/dashboard/projects
-2. Open **SQL Editor** and run the full file **`supabase-setup.sql`**. This creates the teams, profiles, and day-progress tables, row-level security policies, and protected invitation functions. Run it only once on a fresh project.
-3. Under **Authentication → Providers**, enable Email authentication and use appropriate email verification settings.
-4. Find the project URL and **publishable key** in the Supabase project Connect/API settings. The publishable key is meant to be placed in frontend code, **never a secret or service-role key**.
-5. Open the deployed website → **Settings**, paste the project URL and publishable key, and select **Save cloud configuration**.
-6. Each learner creates their own account and verifies their email if requested, then signs in on their own device.
-7. Learner A clicks **Create study duo** and copies the invitation code.
-8. Learner B enters the code under **Join friend's invitation**.
-9. Each learner records study progress on their own device. The pair leaderboard refreshes approximately every 45 seconds while a cloud account is active and the tab is visible (or manually via **Refresh teammate**).
-10. Study-day data is synced to Supabase on checklist and notes changes, and when a timer is paused. Progress is also cached locally for browser resilience.
-
-**Cloud limitations:** No automatic cloud merge of independent pre-login local profiles is performed; these remain separate local records. A cloud login loads its own account history, preventing accidental overwrite between learners. Local changes that occur while offline remain in the browser, but the current version does not offer a comprehensive offline change queue and conflict-resolution engine; after regaining internet, review and resave affected lessons. The cloud component has not been live-tested against a real Supabase project in this environment; verify your configuration with two test accounts before relying on it for important records.
-
-## Focus time and progress rules
-
-- Checking off all **six blocks** marks a day as complete.
-- Total roadmap percentage = completed days ÷ 120 × 100.
-- A study timer adds seconds **only while the page is visible and actively running**, capped by its target duration.
-- Hiding/closing the tab pauses the timer; reopening shows saved elapsed time and lets you press Resume.
-- Browser backups are strongly recommended; incognito browsing, cleared storage, and some browser policies can erase local data.
-- Study streaks use completed day dates with the India (`Asia/Kolkata`) calendar date, not website visits.
+## Learning and project reference
 
 ## Recommended learning schedule
 
