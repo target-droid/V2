@@ -8,14 +8,31 @@ export const cloud={
  get session(){return storeGet(SESSION)},
  get available(){let c=this.config;return !!(c.url&&c.key)},
  get authenticated(){return Boolean(this.session?.access_token&&this.session?.user?.id)},
- configure(url,key){url=url.trim().replace(/\/$/,''); if(url&&!/^https:\/\/[\w.-]+\.supabase\.co$/.test(url))throw Error('Enter your Supabase HTTPS project URL (https://PROJECT.supabase.co).'); if(url&&!key.trim())throw Error('Publishable key is required.');localStorage.setItem(CFG,JSON.stringify({url,key:key.trim()}));},
+ configure(url,key){url=url.trim().replace(/\/$/,''); if(url&&!/^https:\/\/[\w.-]+\.supabase\.co$/.test(url))throw Error('Enter your Supabase HTTPS project URL (https://PROJECT.supabase.co).'); if(url&&!key.trim())throw Error('Publishable key is required.');const old=this.config; if(old.url!==url||old.key!==key.trim()) this.logout();localStorage.setItem(CFG,JSON.stringify({url,key:key.trim()}));},
  async auth(path,body){if(!this.available)throw Error('Configure Supabase first.');const {url,key}=this.config;let res=await fetch(`${url}/auth/v1/${path}`,{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify(body)});let data=await res.json().catch(()=>({}));if(!res.ok)throw Error(data.msg||data.error_description||data.message||`Auth error ${res.status}`);if(data.access_token)localStorage.setItem(SESSION,JSON.stringify(data));return data;},
  async signup(email,password,display_name='Praveen'){return this.auth('signup',{email,password,data:{display_name}})},
  async signin(email,password){return this.auth('token?grant_type=password',{email,password})},
  async refresh(){const s=this.session;if(!s?.refresh_token)throw Error('Please sign in again.');return this.auth('token?grant_type=refresh_token',{refresh_token:s.refresh_token});},
  logout(){localStorage.removeItem(SESSION);},
- async api(path,{method='GET',body=null,prefer='return=representation'}={}){if(!this.available||!this.authenticated)throw Error('Sign in to enable cloud sync.');let {url,key}=this.config;const make=async()=>{let h={apikey:key,Authorization:`Bearer ${this.session.access_token}`,'Content-Type':'application/json',Prefer:prefer};let res=await fetch(`${url}/rest/v1/${path}`,{method,headers:h,body:body===null?undefined:JSON.stringify(body)});return res;};let res=await make();if(res.status===401){await this.refresh();res=await make();}let content=await res.text();let data;try{data=content?JSON.parse(content):null}catch{data=content}if(!res.ok)throw Error(data?.message||data?.hint||`Database error ${res.status}`);return data;},
+ async api(path,{method='GET',body=null,prefer='return=representation'}={}){if(!this.available||!this.authenticated)throw Error('Sign in to enable cloud sync.');let {url,key}=this.config;const make=async()=>{let h={apikey:key,Authorization:`Bearer ${this.session.access_token}`,'Content-Type':'application/json',Prefer:prefer};let res=await fetch(`${url}/rest/v1/${path}`,{method,headers:h,body:body===null?undefined:JSON.stringify(body)});return res;};let res=await make();if(res.status===401){await this.refresh();res=await make();}let content=await res.text();let data;try{data=content?JSON.parse(content):null}catch{data=content}if(!res.ok){
+   const errorCode=String(data?.code||'');
+   const details=String(data?.message||data?.hint||`Database error ${res.status}`);
+   if(errorCode==='PGRST205'||/could not find the table .*schema cache/i.test(details))
+     throw Error('Supabase database setup is incomplete (PGRST205). Download supabase-repair.sql from V2 Settings and run the ENTIRE file in the SQL Editor of the SAME Supabase project. Then click Check cloud setup.');
+   if(errorCode==='PGRST202'||/could not find the function .*schema cache/i.test(details))
+     throw Error('Supabase study-pair function is missing. Run supabase-repair.sql in your project SQL Editor, then retry.');
+   if(errorCode==='42501'||/permission denied|row-level security/i.test(details))
+     throw Error('Supabase permissions are not configured for this account. Run supabase-repair.sql and sign in again. Details: '+details);
+   throw Error(details);
+  }return data;},
  async rpc(name,params){return this.api(`rpc/${name}`,{method:'POST',body:params})},
+ async checkSchema(){
+  if(!this.authenticated)throw Error('Sign in first. Then check the cloud database setup.');
+  for(const table of ['profiles','teams','day_progress','learner_meta']){
+   await this.api(`${table}?select=*&limit=0`);
+  }
+  return true;
+ },
  async upsertProfile(name){const user_id=this.session?.user?.id;if(!user_id)throw Error('Not signed in');const display_name=name.trim().slice(0,48)||'Learner';const existing=await this.getMyProfile();if(existing)return this.api(`profiles?id=eq.${encodeURIComponent(user_id)}`,{method:'PATCH',body:{display_name}});return this.api('profiles',{method:'POST',body:{id:user_id,display_name}});},
  async getMyProfile(){let id=this.session.user.id;const rows=await this.api(`profiles?select=*&id=eq.${encodeURIComponent(id)}`);return rows?.[0]||null;},
  async getProgress(userId){return this.api(`day_progress?select=day,payload,updated_at&user_id=eq.${encodeURIComponent(userId)}&order=day.asc`)},

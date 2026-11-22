@@ -1,3 +1,9 @@
+-- V2: ONE-STEP SUPABASE SETUP / REPAIR (SAFE FOR EXISTING V2 ACCOUNTS)
+-- Run the entire file in the SQL Editor of the SAME Supabase project configured in V2.
+-- Does not drop tables or delete study progress. Creates missing tables, policies,
+-- functions and user profiles; then refreshes the PostgREST schema cache.
+-- Use a dedicated Supabase project for V2. Back up the project before migrations.
+
 -- Optional cloud sync for V2, run ONCE in your own Supabase SQL editor.
 -- Supabase Auth email/password sign-in must be enabled. Email verification is recommended.
 
@@ -30,6 +36,17 @@ create table if not exists public.learner_meta (
   active_day integer not null default 1 check (active_day between 1 and 120),
   updated_at timestamptz not null default now()
 );
+-- Upgrade older V2 schemas without deleting anyone's progress.
+-- CREATE TABLE IF NOT EXISTS does not add missing columns to existing tables.
+alter table public.teams add column if not exists study_day integer not null default 1;
+alter table public.profiles add column if not exists display_name text not null default 'Learner';
+alter table public.profiles add column if not exists team_id uuid references public.teams(id) on delete set null;
+alter table public.profiles add column if not exists updated_at timestamptz not null default now();
+alter table public.learner_meta add column if not exists projects jsonb not null default '{}'::jsonb;
+alter table public.learner_meta add column if not exists video_status jsonb not null default '{}'::jsonb;
+alter table public.learner_meta add column if not exists active_day integer not null default 1;
+alter table public.learner_meta add column if not exists updated_at timestamptz not null default now();
+
 create index if not exists ix_profiles_team on public.profiles(team_id);
 create index if not exists ix_day_progress_owner on public.day_progress(user_id);
 
@@ -49,7 +66,7 @@ $$;
 
 create or replace function public.join_team(invite text)
 returns uuid language plpgsql security definer set search_path = '' as $$
-declare team_uuid uuid; member_count integer; current_name text;
+declare team_uuid uuid; member_count integer; current_name text; existing_team uuid;
 begin
   if (select auth.uid()) is null then raise exception 'Authentication required'; end if;
   select id into team_uuid from public.teams where invite_code=upper(trim(invite)) for update;
@@ -57,7 +74,10 @@ begin
   select count(*) into member_count from public.profiles where team_id=team_uuid;
   if member_count >= 2 and not exists (select 1 from public.profiles where id=(select auth.uid()) and team_id=team_uuid)
   then raise exception 'This study duo already has two members'; end if;
-  select display_name into current_name from public.profiles where id=(select auth.uid());
+  select display_name,team_id into current_name,existing_team from public.profiles where id=(select auth.uid());
+  if existing_team is not null and existing_team <> team_uuid then
+    raise exception 'You already belong to a study pair. Ask for help before switching pairs.';
+  end if;
   insert into public.profiles(id,display_name,team_id) values((select auth.uid()),coalesce(current_name,'Learner'),team_uuid)
   on conflict (id) do update set team_id=excluded.team_id,updated_at=now();
   return team_uuid;
@@ -135,7 +155,6 @@ drop policy if exists meta_update on public.learner_meta;
 drop policy if exists meta_delete on public.learner_meta;
 
 create policy teams_select on public.teams for select to authenticated using(public.can_view_team(id) or owner_id=(select auth.uid()));
-create policy teams_insert on public.teams for insert to authenticated with check(owner_id=(select auth.uid()));
 create policy profiles_select on public.profiles for select to authenticated using(public.can_view_profile(id));
 create policy profiles_insert on public.profiles for insert to authenticated with check(id=(select auth.uid()));
 create policy profiles_update on public.profiles for update to authenticated using(id=(select auth.uid())) with check(id=(select auth.uid()));
@@ -173,3 +192,37 @@ end;
 $$;
 revoke all on function public.set_study_day(integer) from public, anon;
 grant execute on function public.set_study_day(integer) to authenticated;
+
+-- Keep new accounts registered in the profile table. Existing profiles stay unchanged.
+-- Based on the documented Supabase auth.users -> public.profiles pattern.
+create or replace function public.v2_handle_new_user()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  insert into public.profiles(id,display_name)
+  values(new.id,left(coalesce(nullif(btrim(new.raw_user_meta_data ->> 'display_name'),''),'Learner'),48))
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+drop trigger if exists v2_on_auth_user_created on auth.users;
+create trigger v2_on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.v2_handle_new_user();
+
+-- Restore profiles for people who signed up BEFORE this repair ran.
+insert into public.profiles(id,display_name)
+select u.id,left(coalesce(nullif(btrim(u.raw_user_meta_data ->> 'display_name'),''),'Learner'),48)
+from auth.users as u
+on conflict (id) do nothing;
+
+-- Ensure PostgREST can see the newly created tables/RPCs.
+notify pgrst, 'reload schema';
+
+-- The final query must show four table names. Existing rows are NOT deleted.
+select name, exists_in_public
+from (values
+ ('profiles', to_regclass('public.profiles') is not null),
+ ('teams', to_regclass('public.teams') is not null),
+ ('day_progress', to_regclass('public.day_progress') is not null),
+ ('learner_meta', to_regclass('public.learner_meta') is not null)
+) as checks(name,exists_in_public);

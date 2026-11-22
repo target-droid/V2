@@ -13,7 +13,7 @@ const ctx=vm.createContext({__course:{curriculum,phases,videos,totalHours},__clo
 let source=fs.readFileSync(new URL('./app.js',import.meta.url),'utf8');
 source=source.replace(/^import \{curriculum,phases,videos,totalHours\} from '\.\/course\.js';\nimport \{cloud\} from '\.\/cloud\.js';/,'const {curriculum,phases,videos,totalHours}=globalThis.__course; const {cloud}=globalThis.__cloud;');
 vm.runInContext(source,ctx,{timeout:10000});
-assert.match(root.innerHTML,/Praveen &amp; Sanchita · Study together|Praveen & Sanchita · Study together/);
+assert.match(root.innerHTML,/Our learning journey/);
 assert.match(root.innerHTML,/Learn side by side/);
 assert.match(root.innerHTML,/720 study blocks/);
 assert.doesNotMatch(root.innerHTML,/leaderboard|points|10 pts\/block|\bvs\b/i);
@@ -28,7 +28,7 @@ assert.equal(vm.runInContext('sharedStats().days',ctx),0);
 assert.equal(vm.runInContext("stats('local-friend').doneBlocks",ctx),2);
 assert.equal(vm.runInContext("stats('local-you').doneBlocks",ctx),1);
 loc.hash='#/together';vm.runInContext('render()',ctx);
-assert.match(root.innerHTML,/Praveen <span class="green">&<\/span> Sanchita/);
+assert.match(root.innerHTML,/<h1>Study Together<\/h1>/);
 assert.match(root.innerHTML,/Our 120-day study checklist/);
 assert.match(root.innerHTML,/Set Day 1 as our shared lesson/);
 assert.match(root.innerHTML,/1 of 720 blocks completed together/);

@@ -1,4 +1,4 @@
-# V2 — Praveen & Sanchita | Study Together
+# V2 — Study Together
 
 A **collaborative**, not competitive, 120-day software engineering learning website. Praveen and Sanchita follow the same daily roadmap, can choose a **shared study day**, and see separate completion bars, history, quiz results, project statuses, and joint completion. There are **no points, ranks, winners, or leaderboards**.
 
@@ -20,21 +20,30 @@ A **collaborative**, not competitive, 120-day software engineering learning webs
 4. After GitHub completes deployment, hard refresh (`Ctrl+Shift+R`). Example address: `https://pavu1234.github.io/V2/`.
 5. Open **Study Together**, choose a day, click **Set as our shared lesson**, and start studying. With two local profiles, each can tick their own boxes on the same browser.
 
-## Make it work across your two separate devices
+## IMPORTANT: Fix the `public.profiles` schema-cache error first
 
-GitHub Pages / Vercel are static hosts and **cannot synchronize localStorage across phones or computers**. For Praveen and Sanchita to see each other's changes, configure **one Supabase project**:
+If you see **Could not find the table `public.profiles` in the schema cache**, the Supabase project configured in the website is missing a required table (or the API schema cache is stale). The previous `supabase-upgrade.sql` assumed a full initial setup had already been run. **That assumption has been fixed.**
 
-1. Create a Supabase project at https://supabase.com/dashboard.
-2. Open SQL Editor. For a new project run the entire `supabase-setup.sql` file. **If you already ran the older V2 Supabase setup**, run `supabase-upgrade.sql` instead to add the `study_day` field and sharing function without resetting existing data. Do not run the fresh schema over an existing production project without inspecting the changes.
-3. In V2 → **Settings**, enter the same Supabase project URL and **publishable key** on both devices, then click **Save cloud configuration**. Never put the Supabase secret/service-role key in a web page.
-4. Each learner picks **Who is using this device?** (`Praveen` on Praveen's device, `Sanchita` on hers), creates their **own email/password account**, confirms email if required, then signs in.
-5. One person clicks **Create study duo**. Share the invitation code privately. The other person enters the code under **Join friend's invitation** and clicks **Join duo**.
-6. Both open **Study Together**. Either member can select a shared day. That choice synchronizes on the next refresh; the other person's checklist is read-only. Your own completion stays editable.
-7. Partner progress and shared day are polled about every **15 seconds while the website is open and visible**. Click **Refresh shared progress** to update manually. This is not live synchronized video playback or a voice call: each learner watches the same lesson on their own device.
+**One-step repair, works for new and existing V2 projects:**
 
-**Important:** Cloud updates need an active internet connection. Local changes are saved in the browser. If an update fails while offline, the current prototype does not guarantee automatic eventual cloud synchronization; reopen Settings → **Restore / sync my data** and verify your partner sees the changes. Conflicting edits across devices are not fully conflict-proof.
+1. Open https://supabase.com/dashboard and select the exact project whose URL you entered in V2 Settings. Do **not** create a second Supabase project unless you plan to use it for both accounts.
+2. Open **SQL Editor → New query**.
+3. Open the provided **`supabase-repair.sql`** file, copy its **entire contents**, paste into SQL Editor, and click **Run**. Do not run only the last query or the old upgrade file.
+4. The result should list `profiles`, `teams`, `day_progress`, `learner_meta`, with `exists_in_public = true` for each.
+5. In **Project Settings → Data API**, ensure the API is enabled and `public` is among the exposed schemas (Supabase default). The script requests a schema-cache refresh.
+6. Return to the deployed V2 page, hard-refresh, sign in and click **Check cloud setup** in Settings. Then **Start studying together**.
 
-**Cloud security:** Supabase Auth identifies each learner, Row Level Security protects individual lesson records, and invitation joining links only two accounts. Members can read each other's learning completion but cannot edit each other's work. This implementation hasn't been independently verified against your real Supabase project; test it with both accounts before relying on it.
+The repair script uses `CREATE TABLE IF NOT EXISTS`, adds missing columns, recreates required policies/functions, and backfills missing profiles from existing Supabase Auth accounts. It **does not delete old progress or user accounts**. For important cloud data, export a database backup before running a migration. If the four tables already exist, the issue may instead be an inaccessible schema, wrong project URL/key, or stale API cache.
+
+## Make progress visible on both devices
+
+1. In V2 → **Settings**, enter the **same Supabase Project URL and publishable key** on both devices, then click **Save cloud configuration**. Never use a secret or service-role key.
+2. Select the correct learner name on each device. Register with **separate email/password accounts** in the same Supabase project. Confirm emails if your project requires it.
+3. Sign in, verify that **Check cloud setup** succeeds. Praveen clicks **Start studying together** and shares the invitation code privately. Sanchita enters it in **Join study pair**.
+4. Open **Study Together** on both devices. Praveen and Sanchita can see each other's completed lessons and individual progress; common achievements count as complete only after both tick the same block.
+5. Shared data refreshes around every 15 seconds while the page is open and visible, or via **Refresh shared progress**. Each learner can edit only their own work.
+
+**Important limitations:** GitHub Pages / Vercel host the frontend. Browser-local data does not sync across devices by itself. The separate cloud accounts must be connected to the *same* project. The app does not support live joint video calls. If offline changes conflict across multiple devices, latest-write resolution may require review.
 
 ## Project files
 
@@ -43,8 +52,8 @@ GitHub Pages / Vercel are static hosts and **cannot synchronize localStorage acr
 | `index.html`, `styles.css`, `favicon.svg` | Site shell and styling |
 | `app.js`, `course.js` | Dashboard, daily content, progress, quiz and timer logic |
 | `cloud.js`, `cloud-config.js` | Optional Supabase connectivity |
-| `supabase-setup.sql` | New project schema and security rules |
-| `supabase-upgrade.sql` | Upgrade an existing V2 cloud project |
+| `supabase-repair.sql` | **Recommended** one-step setup and existing-project repair |
+| `supabase-setup.sql`, `supabase-upgrade.sql` | Identical idempotent setup/repair for backward compatibility |
 | `tests.mjs`, `together-tests.mjs` | Curriculum and collaborative feature tests (run using Node.js) |
 | `MASTER_PROMPT.md` | Full instructions for generating a React/TypeScript version |
 
